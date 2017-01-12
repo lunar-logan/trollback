@@ -1,9 +1,8 @@
 package org.inverse.service.impl;
 
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.ItemsList;
-import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitorAdapter;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.Statement;
@@ -15,19 +14,25 @@ import net.sf.jsqlparser.statement.insert.Insert;
 import org.inverse.exception.QueryNotSupportedException;
 import org.inverse.exception.QueryParsingException;
 import org.inverse.query.Query;
+import org.inverse.query.Value;
+import org.inverse.query.ValueFactory;
 import org.inverse.query.impl.CreateQueryImpl;
+import org.inverse.query.impl.InsertQueryImpl;
 import org.inverse.service.ParserService;
 
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by Dell on 11-01-2017.
  */
 public class ParserServiceImpl implements ParserService {
+
+    private final ValueFactory valueFactory;
+
+    public ParserServiceImpl(ValueFactory valueFactory) {
+        this.valueFactory = valueFactory;
+    }
 
     public Query parse(String sql) throws QueryNotSupportedException, QueryParsingException {
         Statement statement;
@@ -73,13 +78,30 @@ public class ParserServiceImpl implements ParserService {
         Insert insert = (Insert) statement;
         List<Column> columns = insert.getColumns();
         // https://github.com/JSQLParser/JSqlParser/blob/master/src/test/java/net/sf/jsqlparser/test/insert/InsertTest.java
-        ItemsList itemsList = insert.getItemsList();
-        itemsList.accept(new ItemsListVisitorAdapter(){
-            @Override
-            public void visit(ExpressionList expressionList) {
-                super.visit(expressionList);
+        List<String> values = new ArrayList<>();
+
+        ExpressionList expressionList = (ExpressionList) insert.getItemsList();
+        if (expressionList != null) {
+            List<Expression> expressions = expressionList.getExpressions();
+            if (expressions != null) {
+                for (Expression exp : expressions) {
+                    Value value = valueFactory.inferValue(exp);
+                    values.add(value.getValue());
+                }
+
+                if (columns != null) {
+                    List<String> columnNames = new ArrayList<>();
+                    columns.forEach(col -> columnNames.add(col.getColumnName()));
+                    if (columnNames.size() == values.size()) {
+                        return new InsertQueryImpl(insert.getTable().getName(), columnNames, values);
+                    } else {
+                        throw new IllegalStateException();
+                    }
+                } else {
+                    return new InsertQueryImpl(insert.getTable().getName(), Collections.emptyList(), values);
+                }
             }
-        });
+        }
         return null;
     }
 }
