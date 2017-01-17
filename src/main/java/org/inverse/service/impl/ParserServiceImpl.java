@@ -14,10 +14,10 @@ import net.sf.jsqlparser.statement.insert.Insert;
 import org.inverse.exception.QueryNotSupportedException;
 import org.inverse.exception.QueryParsingException;
 import org.inverse.query.Query;
+import org.inverse.query.QueryFactory;
 import org.inverse.query.Value;
 import org.inverse.query.ValueFactory;
 import org.inverse.query.impl.CreateQueryImpl;
-import org.inverse.query.impl.InsertQueryImpl;
 import org.inverse.service.ParserService;
 
 import java.io.StringReader;
@@ -29,9 +29,11 @@ import java.util.*;
 public class ParserServiceImpl implements ParserService {
 
     private final ValueFactory valueFactory;
+    private final QueryFactory queryFactory;
 
-    public ParserServiceImpl(ValueFactory valueFactory) {
+    public ParserServiceImpl(ValueFactory valueFactory, QueryFactory queryFactory) {
         this.valueFactory = valueFactory;
+        this.queryFactory = queryFactory;
     }
 
     public Query parse(String sql) throws QueryNotSupportedException, QueryParsingException {
@@ -93,12 +95,12 @@ public class ParserServiceImpl implements ParserService {
                     List<String> columnNames = new ArrayList<>();
                     columns.forEach(col -> columnNames.add(col.getColumnName()));
                     if (columnNames.size() == values.size()) {
-                        return new InsertQueryImpl(insert.getTable().getName(), columnNames, values);
+                        return queryFactory.getQuery(insert, columnNames, values); // new InsertQueryImpl(insert.getTable().getName(), columnNames, values);
                     } else {
                         throw new IllegalStateException();
                     }
                 } else {
-                    return new InsertQueryImpl(insert.getTable().getName(), Collections.emptyList(), values);
+                    return queryFactory.getQuery(insert, Collections.emptyList(), values); // new InsertQueryImpl(insert.getTable().getName(), Collections.emptyList(), values);
                 }
             }
         }

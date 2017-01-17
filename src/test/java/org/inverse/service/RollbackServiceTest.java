@@ -2,6 +2,7 @@ package org.inverse.service;
 
 import org.inverse.exception.QueryNotSupportedException;
 import org.inverse.exception.QueryParsingException;
+import org.inverse.query.impl.ValueFactoryImpl;
 import org.inverse.service.impl.ParserServiceImpl;
 import org.inverse.service.impl.QueryInverterServiceImpl;
 import org.inverse.service.impl.RollbackServiceImpl;
@@ -24,7 +25,7 @@ public class RollbackServiceTest {
 
     @Test
     public void testGetRollbackQuery() {
-        ParserService parserService = new ParserServiceImpl(valueFactory);
+        ParserService parserService = new ParserServiceImpl(new ValueFactoryImpl(), queryFactory);
         SchemaService dummySchemaService = getDummySchemaService();
         System.out.println(dummySchemaService.getSchema("23456"));
         RollbackService rollbackService = new RollbackServiceImpl(
